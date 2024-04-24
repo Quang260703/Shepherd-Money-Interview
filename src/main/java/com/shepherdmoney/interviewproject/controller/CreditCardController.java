@@ -150,10 +150,7 @@ public class CreditCardController {
 
                 // Get balance history
                 TreeSet<BalanceHistory> balanceHistory = new TreeSet<>(creditCard.get().getBalanceHistory());
-                for (var i : balanceHistory) {
-                    System.out.println(i.getDate());
-                    System.out.println(i.getBalance());
-                }
+
                 // Get the transaction date
                 BalanceHistory date = new BalanceHistory();
                 date.setDate(transaction.getBalanceDate());
