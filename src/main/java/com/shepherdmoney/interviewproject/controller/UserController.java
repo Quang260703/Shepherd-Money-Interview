@@ -3,9 +3,7 @@ package com.shepherdmoney.interviewproject.controller;
 import com.shepherdmoney.interviewproject.model.User;
 import com.shepherdmoney.interviewproject.repository.UserRepository;
 import com.shepherdmoney.interviewproject.vo.request.CreateUserPayload;
-
 import java.util.Optional;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

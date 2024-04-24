@@ -8,18 +8,15 @@ import com.shepherdmoney.interviewproject.repository.UserRepository;
 import com.shepherdmoney.interviewproject.vo.request.AddCreditCardToUserPayload;
 import com.shepherdmoney.interviewproject.vo.request.UpdateBalancePayload;
 import com.shepherdmoney.interviewproject.vo.response.CreditCardView;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
-
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
@@ -52,8 +49,7 @@ public class CreditCardController {
                 return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
             }
 
-            // Set credit card owner
-            creditCard.setOwner(user.get());
+            // Set credit card data
             creditCard.setIssuanceBank(payload.getCardIssuanceBank());
             creditCard.setNumber(payload.getCardNumber());
 
@@ -153,8 +149,11 @@ public class CreditCardController {
                 }
 
                 // Get balance history
-                TreeSet<BalanceHistory> balanceHistory = creditCard.get().getBalanceHistory();
-
+                TreeSet<BalanceHistory> balanceHistory = new TreeSet<>(creditCard.get().getBalanceHistory());
+                for (var i : balanceHistory) {
+                    System.out.println(i.getDate());
+                    System.out.println(i.getBalance());
+                }
                 // Get the transaction date
                 BalanceHistory date = new BalanceHistory();
                 date.setDate(transaction.getBalanceDate());
@@ -162,32 +161,13 @@ public class CreditCardController {
 
                 // Add date if balance history is empty
                 if (balanceHistory.isEmpty()) {
-                    balanceHistory.add(date);
+                    creditCard.get().addBalance(date);
                 } else {
                     // Filling the gaps in balance history
-                    creditCard.get().updateBalanceHistory();
-                    // Getting the updated history
-                    balanceHistory = creditCard.get().getBalanceHistory();
-                    // Getting the closest date to the transaction date
-                    BalanceHistory closestDate = balanceHistory.ceiling(date);
-                    if (closestDate != null && closestDate.getDate().equals(date.getDate())) {
-                        // Update balance for each day counting from transaction date
-                        double balance = date.getBalance() - closestDate.getBalance();
-                        closestDate.setBalance(closestDate.getBalance() + balance);
-                        BalanceHistory left = closestDate;
-                        BalanceHistory right = balanceHistory.higher(left);
-                        while (right != null) {
-                            right.setBalance(right.getBalance() + balance);
-                            left = right;
-                            right = balanceHistory.higher(left);
-                        }
-                    } else {
-                        // If transaction date not in the treeset, add it to the treeset
-                        balanceHistory.add(date);
-                    }
+                    creditCard.get().fillingBalanceHistory();
+                    // Update all the following budget with the difference
+                    creditCard.get().updateBalanceHistory(date);
                 }
-                creditCard.get().setBalanceHistory(balanceHistory);
-                creditCard.get().updateBalanceHistory();
                 // Save to repository
                 creditCardRepository.save(creditCard.get());
             }

@@ -4,12 +4,11 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
-
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.SortedSet;
 import java.util.TreeSet;
-
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -67,16 +66,29 @@ public class CreditCard {
     // 6. In the condition that there are gaps, retrieval of "closest" balance date
     // should also be fast. Aka, given 4-15, return 4-16 entry tuple
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "creditCard")
-    private TreeSet<BalanceHistory> balanceHistory = new TreeSet<BalanceHistory>(
+    private SortedSet<BalanceHistory> balanceHistory = new TreeSet<BalanceHistory>(
             (BalanceHistory his1, BalanceHistory his2) -> his1.getDate().compareTo(his2.getDate()));
 
-    public void updateBalanceHistory() {
+    // Function to add a balance to history and set this credit card to that
+    // balanceHistory
+    public void addBalance(BalanceHistory balance) {
+        balance.setCreditCard(this);
+        balanceHistory.add(balance);
+    }
+
+    // Function that fills the gap in the balance history
+    public void fillingBalanceHistory() {
+        TreeSet<BalanceHistory> updatedHistory = new TreeSet<>(balanceHistory);
+        // Create a list to store the gap dates
         List<BalanceHistory> balanceGap = new ArrayList<BalanceHistory>();
-        BalanceHistory left = balanceHistory.first();
-        BalanceHistory right = balanceHistory.higher(left);
+        // Using two pointers
+        BalanceHistory left = updatedHistory.first();
+        BalanceHistory right = updatedHistory.higher(left);
         while (right != null) {
+            // Getting the differences
             long days = ChronoUnit.DAYS.between(left.getDate(), right.getDate());
             if (days > 1) {
+                // Filling the gaps
                 for (int i = 1; i < days; i++) {
                     BalanceHistory newHistory = new BalanceHistory();
                     newHistory.setBalance(left.getBalance());
@@ -85,10 +97,37 @@ public class CreditCard {
                 }
             }
             left = right;
-            right = balanceHistory.higher(left);
+            right = updatedHistory.higher(left);
         }
+        // Update the history
         for (var gap : balanceGap) {
-            balanceHistory.add(gap);
+            addBalance(gap);
+        }
+    }
+
+    // Function that update balanceHistory using the difference in balance
+    public void updateBalanceHistory(BalanceHistory date) {
+        TreeSet<BalanceHistory> updatedHistory = new TreeSet<>(balanceHistory);
+        // Getting the closest date to the transaction date
+        BalanceHistory closestDate = updatedHistory.ceiling(date);
+        if (closestDate != null && closestDate.getDate().equals(date.getDate())) {
+            // Update balance for each day counting from transaction date
+            double balance = date.getBalance() - closestDate.getBalance();
+            closestDate.setBalance(closestDate.getBalance() + balance);
+            // Two pointer
+            BalanceHistory left = closestDate;
+            BalanceHistory right = updatedHistory.higher(left);
+            while (right != null) {
+                right.setBalance(right.getBalance() + balance);
+                left = right;
+                right = updatedHistory.higher(left);
+            }
+            // Set the new history
+            balanceHistory = updatedHistory;
+        } else {
+            // If transaction date not in the history, add it to the set and fill the gaps
+            addBalance(date);
+            fillingBalanceHistory();
         }
     }
 }

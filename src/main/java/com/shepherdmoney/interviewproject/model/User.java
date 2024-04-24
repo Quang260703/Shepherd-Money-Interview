@@ -2,7 +2,6 @@ package com.shepherdmoney.interviewproject.model;
 
 import java.util.HashSet;
 import java.util.Set;
-
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -31,11 +30,12 @@ public class User {
     // and user by a credit card.
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "owner")
     // Map the credit cards to property owner. Since each credit card is unique,
-    // HashSet is implemented.
+    // Set is implemented.
     private Set<CreditCard> creditCards = new HashSet<CreditCard>();
 
-    // Add a credit card to user's list of credit cards
+    // Add a credit card to user's list of credit cards and set credit card owner
     public void addCreditCard(CreditCard card) {
+        card.setOwner(this);
         creditCards.add(card);
     }
 }
